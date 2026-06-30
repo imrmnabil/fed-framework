@@ -16,7 +16,7 @@ client selection (**AUCTION**), and server aggregation (**FedAvg / FedOpt / FedA
 | Thesis § | Component | Where |
 |---|---|---|
 | §3.2.1, Eq. 3.2, Figs 3.3–3.8 | Dirichlet + IID partitioning & label-distribution figures | [partition.py](src/fedcity/datasets/partition.py), [visualize.py](src/fedcity/datasets/visualize.py) |
-| §3.2/3.7/3.8/3.9 | Dataset loaders (CDC Diabetes, smart-grid theft, GTSRB) | [loaders.py](src/fedcity/datasets/loaders.py) |
+| §3.2/3.7/3.8/3.9 | Dataset loaders (Breast Cancer WDBC, smart-grid theft, GTSRB) | [loaders.py](src/fedcity/datasets/loaders.py) |
 | Tables 3.1/3.3/3.5 | Keras models (DNN / logistic-reg / deep CNN) — **param counts verified** | [models/](src/fedcity/models/) |
 | §3.4 | FedPAQ: periodic local averaging + quantized updates + partial participation | [client.py](src/fedcity/fl/client.py), [quantize.py](src/fedcity/fl/quantize.py), [runner.py](src/fedcity/runner.py) |
 | §3.4.1 | gRPC / Flower transport (optional real-distributed path) | [flower_app.py](src/fedcity/fl/flower_app.py) |
@@ -30,7 +30,7 @@ client selection (**AUCTION**), and server aggregation (**FedAvg / FedOpt / FedA
 
 | Domain | Dataset | Model | Clients | Rounds | Partitions |
 |---|---|---|---|---|---|
-| Healthcare | CDC Diabetes Health Indicators (UCI 891) | DNN, 10→256→128→1 | 20 | 30 | IID, Dir(0.3), Dir(5) |
+| Healthcare | Breast Cancer Wisconsin Diagnostic (UCI 17) | DNN, 10→64→32→1 | 20 | 30 | IID, Dir(0.3), Dir(5) |
 | Smart Grid | Theft Detection (Kaggle) | LogReg NN, (104,1)→1 | 20 | 100 | Dir(0.3), Dir(5) |
 | Traffic | GTSRB (43 classes) | CNN, 5 conv blocks → softmax-43 | 20 | 100 | Dir(0.3), Dir(5) |
 
@@ -144,11 +144,13 @@ ablation.
 
 ## Status & notes
 
-- Healthcare runs reproduce the thesis's **FedAdam ≥ FedOpt ≥ FedAvg** ordering. The
-  CDC dataset is ~14% positive, so accuracies sit near the thesis's reported values
-  (e.g. FedAdam/Dir(0.3) ≈ 0.86); see `experiments/healthcare/results_table.md`.
+- The healthcare domain uses **Breast Cancer Wisconsin Diagnostic (UCI 17)**. It replaced
+  CDC Diabetes (UCI 891), whose 86/14 class skew pinned eval accuracy at the majority-class
+  baseline (≈0.861, `conv@1`) and hid every federated dynamic. WDBC (37% positive, cleanly
+  learnable) makes accuracy move and convergence discriminative — e.g. fedavg reaches ≈0.95
+  at `conv@2` on IID vs ≈0.90 at `conv@21` on Dir(0.3), surfacing the non-IID degradation.
 - The traffic CNN at full GTSRB scale is GPU-recommended; the CPU path subsamples.
-- **Open items / assumptions** (documented in the plan): the exact 10-feature selection
-  for CDC Diabetes uses ANOVA F-score top-k; the smart-grid (104,1) input aggregates the
+- **Open items / assumptions** (documented in the plan): the 10-feature selection
+  for Breast Cancer WDBC uses ANOVA F-score top-k (of 30 numeric features); the smart-grid (104,1) input aggregates the
   daily series into 104 equal time-bins; FedPAQ `levels` (s) and local epochs (τ) are
   exposed in config with sensible defaults (tune to hit specific comm-cost targets).

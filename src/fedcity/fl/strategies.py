@@ -58,9 +58,20 @@ def apply_server_update(
     beta_1: float = 0.9,
     beta_2: float = 0.99,
     tau: float = 1e-3,
+    plain_avg_idx: set[int] | None = None,
 ) -> list[np.ndarray]:
-    """Apply the chosen strategy's update rule; mutates ``state`` in place."""
+    """Apply the chosen strategy's update rule; mutates ``state`` in place.
+
+    ``plain_avg_idx`` names weight tensors that must bypass the server optimizer and
+    be FedAvg-averaged (``w + Δ``) instead — chiefly BatchNorm running buffers
+    (``moving_mean``/``moving_variance``). Those are activation *statistics*, not
+    pseudo-gradients: the adaptive ``η·m/(√v+τ)`` step normalizes each coordinate to
+    ~``server_lr`` regardless of signal and steadily drives ``moving_variance``
+    negative, after which BN's ``√(moving_variance+ε)`` yields NaN. Averaging keeps
+    them a convex combination of per-client values, hence provably ≥ 0.
+    """
     strategy = strategy.lower()
+    plain = plain_avg_idx or set()
     gw = [np.asarray(w, dtype=np.float64) for w in global_w]
 
     if strategy == "fedavg":
@@ -70,6 +81,9 @@ def apply_server_update(
     if strategy == "fedopt":
         new = []
         for i, (w, d) in enumerate(zip(gw, agg_delta)):
+            if i in plain:
+                new.append((w + d).astype(np.float32))
+                continue
             state.m[i] = beta_1 * state.m[i] + d
             new.append((w + server_lr * state.m[i]).astype(np.float32))
         return new
@@ -77,6 +91,9 @@ def apply_server_update(
     if strategy == "fedadam":
         new = []
         for i, (w, d) in enumerate(zip(gw, agg_delta)):
+            if i in plain:
+                new.append((w + d).astype(np.float32))
+                continue
             state.m[i] = beta_1 * state.m[i] + (1 - beta_1) * d
             state.v[i] = beta_2 * state.v[i] + (1 - beta_2) * np.square(d)
             step = server_lr * state.m[i] / (np.sqrt(state.v[i]) + tau)

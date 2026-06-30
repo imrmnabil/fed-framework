@@ -1,22 +1,27 @@
-# Healthcare domain — CDC Diabetes Health Indicators (UCI id=891)
-# Thesis §3.7 ; Table 3.1 (model), Table 3.2 (results: 20 clients, 30 rounds)
+# Healthcare domain — Breast Cancer Wisconsin Diagnostic (UCI id=17)
+# Replaces CDC Diabetes (id=891): that set's 86/14 class skew pinned eval accuracy
+# at the majority-class baseline (~0.861), so every run reported "conv@1" and no
+# strategy/partition difference was visible. WDBC's 30 numeric features are cleanly
+# learnable (centralized acc ~0.96), so accuracy moves and the federated dynamics
+# the testbed is meant to compare actually show up.
 domain: healthcare
 
 dataset:
-  name: cdc_diabetes
-  uci_id: 891
-  n_features: 10          # thesis model input shape (10,)
+  name: breast_cancer_wdbc
+  uci_id: 17
+  n_features: 10          # top-10 ANOVA-F features of 30 (keeps thesis Input(10,))
   task: binary
+  positive_label: M       # malignant = positive class (1)
 
 model:
-  hidden_units: [256, 128]
-  dropout: 0.3
-  l2: 0.01
+  hidden_units: [64, 32]    # small net for 569-row dataset (256/128 was sized for 250k-row CDC)
+  dropout: 0.2
+  l2: 0.0001                # 0.01 dominated the loss and starved learning on this data
   lr: 0.001
 
 federated:
   rounds: 30
-  local_batch_size: 256     # larger batch keeps CPU runs tractable on 250k rows
+  local_batch_size: 16      # ~569 rows across clients: small batch -> several local steps
   convergence_threshold: 0.85
 
 eval:

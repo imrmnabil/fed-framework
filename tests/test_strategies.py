@@ -40,6 +40,20 @@ def test_fedopt_momentum_accumulates():
     assert g[0][0] > step1[0][0]
 
 
+def test_plain_avg_idx_bypasses_server_optimizer():
+    """BN-buffer tensors flagged via ``plain_avg_idx`` are FedAvg-averaged (w+Δ)
+    instead of taking the adaptive step that can drive a moving_variance negative."""
+    gw = [np.zeros(2), np.full(2, 1.0)]          # tensor 1 stands in for moving_variance
+    delta = [np.ones(2), np.full(2, -0.3)]
+    state = AggregatorState()
+    new = apply_server_update(
+        "fedadam", gw, delta, state, server_lr=0.05, plain_avg_idx={1},
+    )
+    np.testing.assert_allclose(new[1], [0.7, 0.7])               # exactly w + Δ
+    assert not np.allclose(new[0], gw[0])                        # tensor 0 still optimized
+    assert np.allclose(state.m[1], 0.0) and np.allclose(state.v[1], 0.0)  # buffer untouched
+
+
 def test_unknown_strategy_raises():
     try:
         apply_server_update("nope", [np.zeros(2)], [np.zeros(2)], AggregatorState())

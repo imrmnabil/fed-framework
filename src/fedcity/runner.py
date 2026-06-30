@@ -59,6 +59,7 @@ class FederatedSimulation:
         # one shared global model, server optimizer state, selector
         self.model = build_model(cfg, self.bundle.input_shape, self.bundle.n_outputs, self.bundle.task)
         self.global_weights = self.model.get_weights()
+        self.buffer_idx = self._non_trainable_indices(self.model)
         self.agg_state = AggregatorState()
         self.selector = make_selector(cfg, self.seed)
         self.comm = CommAccountant()
@@ -67,6 +68,15 @@ class FederatedSimulation:
         import tensorflow as tf
 
         tf.keras.utils.set_random_seed(self.seed)
+
+    @staticmethod
+    def _non_trainable_indices(model) -> set[int]:
+        """Indices into ``get_weights()`` of non-trainable buffers (e.g. BatchNorm
+        ``moving_mean``/``moving_variance``). These are running statistics, not
+        pseudo-gradients, so the server optimizer must FedAvg-average them rather
+        than apply its adaptive/momentum step (see ``apply_server_update``)."""
+        non_trainable = {id(w) for w in model.non_trainable_weights}
+        return {i for i, w in enumerate(model.weights) if id(w) in non_trainable}
 
     @staticmethod
     def _resolve_server_opt(fed: dict) -> dict:
@@ -115,7 +125,8 @@ class FederatedSimulation:
 
             agg_delta = aggregate_deltas(updates)
             self.global_weights = apply_server_update(
-                fed["strategy"], self.global_weights, agg_delta, self.agg_state, **opt,
+                fed["strategy"], self.global_weights, agg_delta, self.agg_state,
+                plain_avg_idx=self.buffer_idx, **opt,
             )
 
             loss, acc = self._evaluate()

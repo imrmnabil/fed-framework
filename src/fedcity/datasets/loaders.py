@@ -43,10 +43,31 @@ def _split(x, y, val_split: float, seed: int):
     return train_test_split(x, y, test_size=val_split, random_state=seed, stratify=stratify)
 
 
+def _binarize_labels(y: np.ndarray, positive=None) -> np.ndarray:
+    """Map a binary target to ``{0, 1}`` integer labels.
+
+    Numeric 0/1 targets pass through unchanged. String/categorical targets (e.g.
+    WDBC's ``'M'``/``'B'``) are mapped deterministically: the class named by
+    ``positive`` becomes 1 if given, otherwise the lexicographically-largest class
+    is treated as positive (so ``'M' > 'B'`` puts malignant = 1)."""
+    if y.dtype.kind in "iuf":
+        return y.astype(int)
+    classes = sorted({str(v) for v in y})
+    pos = str(positive) if positive is not None and str(positive) in classes else classes[-1]
+    return np.asarray([1 if str(v) == pos else 0 for v in y], dtype=int)
+
+
 # --------------------------------------------------------------------------- #
-# Healthcare — CDC Diabetes Health Indicators
+# Healthcare — Breast Cancer Wisconsin Diagnostic (UCI id=17)
 # --------------------------------------------------------------------------- #
 def load_healthcare(cfg: dict) -> DatasetBundle:
+    """Healthcare domain: Breast Cancer Wisconsin Diagnostic (UCI id=17).
+
+    30 numeric cell-nuclei features, binary diagnosis (Malignant=1 / Benign=0).
+    Replaces the original CDC Diabetes set (id=891), whose 86/14 class skew pinned
+    eval accuracy at the majority-class baseline (~0.861) and hid every federated
+    dynamic; WDBC is cleanly learnable (centralized acc ~0.96) so accuracy actually
+    moves and strategy/partition/selector differences become visible."""
     from sklearn.feature_selection import SelectKBest, f_classif
     from sklearn.preprocessing import StandardScaler
     from ucimlrepo import fetch_ucirepo
@@ -55,18 +76,18 @@ def load_healthcare(cfg: dict) -> DatasetBundle:
     n_features = ds_cfg.get("n_features", 10)
     seed = cfg["seed"]
 
-    repo = fetch_ucirepo(id=ds_cfg.get("uci_id", 891))
+    repo = fetch_ucirepo(id=ds_cfg.get("uci_id", 17))
     x = repo.data.features.copy()
     y = repo.data.targets.copy()
     x = x.select_dtypes(include="number").fillna(x.median(numeric_only=True))
-    y = np.asarray(y).ravel().astype(int)
+    y = _binarize_labels(np.asarray(y).ravel(), positive=ds_cfg.get("positive_label"))
 
     x = StandardScaler().fit_transform(x.values)
-    if x.shape[1] > n_features:                       # pick top-k features (thesis input = 10)
+    if x.shape[1] > n_features:                       # top-k by ANOVA F (thesis input = 10)
         x = SelectKBest(f_classif, k=n_features).fit_transform(x, y)
 
     xtr, xval, ytr, yval = _split(x.astype(np.float32), y, cfg["eval"]["val_split"], seed)
-    return DatasetBundle(xtr, ytr, xval, yval, (x.shape[1],), 2, "binary", "cdc_diabetes")
+    return DatasetBundle(xtr, ytr, xval, yval, (x.shape[1],), 2, "binary", ds_cfg.get("name", "breast_cancer_wdbc"))
 
 
 # --------------------------------------------------------------------------- #

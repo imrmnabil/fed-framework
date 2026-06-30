@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Fetch the CDC Diabetes Health Indicators dataset (UCI id=891) and cache a CSV.
+"""Fetch the Breast Cancer Wisconsin Diagnostic dataset (UCI id=17) and cache a CSV.
 
 ucimlrepo downloads on demand, so this just warms the cache and writes a local
 copy for inspection. Requires network access on first run.
@@ -17,12 +17,12 @@ def main():
     out_dir = REPO_ROOT / "data" / "healthcare"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    repo = fetch_ucirepo(id=891)
+    repo = fetch_ucirepo(id=17)
     x = repo.data.features
     y = repo.data.targets
     df = x.copy()
     df["target"] = y.values.ravel()
-    csv = out_dir / "cdc_diabetes.csv"
+    csv = out_dir / "breast_cancer_wdbc.csv"
     df.to_csv(csv, index=False)
     print(f"Saved {len(df)} rows x {x.shape[1]} features -> {csv}")
 
