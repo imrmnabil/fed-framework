@@ -1,0 +1,28 @@
+# Traffic domain — GTSRB (German Traffic Sign Recognition Benchmark)
+# Thesis §3.9 ; Table 3.5 (model: deep CNN, 43 classes, 100 rounds)
+domain: traffic
+
+dataset:
+  name: gtsrb
+  data_dir: data/gtsrb
+  image_size: 32            # 32x32x3
+  n_classes: 43
+  task: multiclass
+  # CPU knobs — GTSRB full scale is GPU-recommended; shrink for CPU runs:
+  subsample_fraction: 0.15  # fraction of training images to keep (1.0 = full)
+  max_per_class: null       # optional hard cap per class
+
+model:
+  conv_filters: [64, 128, 256, 512, 1024]
+  dense_units: [1024, 512, 256, 128]
+  conv_dropout: 0.25
+  dense_dropout: 0.5
+  lr: 0.001
+
+federated:
+  rounds: 100
+  local_batch_size: 64
+  convergence_threshold: 0.80
+
+eval:
+  convergence_threshold: 0.80

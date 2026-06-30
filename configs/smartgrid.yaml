@@ -1,0 +1,21 @@
+# Smart Grid domain — Theft Detection in Smart Grids (Kaggle)
+# Thesis §3.8 ; Table 3.3 (model), Table 3.4 (results: 20 clients, 100 rounds)
+domain: smartgrid
+
+dataset:
+  name: smartgrid_theft
+  kaggle_dataset: ""        # set to "owner/dataset-slug"; see scripts/download_smartgrid.py
+  csv_path: data/smartgrid/theft.csv
+  label_col: IsStealer
+  n_features: 104           # thesis model input shape (104, 1)
+  task: binary
+
+model:
+  lr: 0.001                 # logistic regression NN: Flatten -> Dense(1, sigmoid)
+
+federated:
+  rounds: 100
+  convergence_threshold: 0.85
+
+eval:
+  convergence_threshold: 0.85

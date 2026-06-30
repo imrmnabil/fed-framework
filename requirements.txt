@@ -1,0 +1,16 @@
+# Core ML / FL stack (CPU-only, Python 3.12)
+tensorflow-cpu>=2.18,<2.20
+flwr[simulation]>=1.15,<2.0
+numpy>=1.26
+pandas>=2.0
+scikit-learn>=1.4
+matplotlib>=3.8
+pyyaml>=6.0
+
+# Dataset acquisition
+ucimlrepo>=0.0.7        # CDC Diabetes Health Indicators (healthcare)
+kaggle>=1.6             # Smart-grid theft detection
+requests>=2.31          # GTSRB archive download
+
+# Testing
+pytest>=8.0

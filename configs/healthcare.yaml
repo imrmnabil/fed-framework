@@ -1,0 +1,23 @@
+# Healthcare domain — CDC Diabetes Health Indicators (UCI id=891)
+# Thesis §3.7 ; Table 3.1 (model), Table 3.2 (results: 20 clients, 30 rounds)
+domain: healthcare
+
+dataset:
+  name: cdc_diabetes
+  uci_id: 891
+  n_features: 10          # thesis model input shape (10,)
+  task: binary
+
+model:
+  hidden_units: [256, 128]
+  dropout: 0.3
+  l2: 0.01
+  lr: 0.001
+
+federated:
+  rounds: 30
+  local_batch_size: 256     # larger batch keeps CPU runs tractable on 250k rows
+  convergence_threshold: 0.85
+
+eval:
+  convergence_threshold: 0.85

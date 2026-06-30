@@ -1,0 +1,47 @@
+# Shared defaults for all experiments. Domain configs override/extend these.
+seed: 42
+
+federated:
+  n_clients: 20
+  rounds: 30
+  fraction_fit: 0.5          # FedPAQ partial participation (r of n nodes)
+  fraction_eval: 0.0         # 0 => server-side centralized eval only
+  min_available_clients: 2
+  local_epochs: 2            # FedPAQ periodic averaging (tau > 1)
+  local_batch_size: 32
+  client_failure_prob: 0.2   # per-round client drop probability
+  strategy: fedadam          # fedavg | fedopt | fedadam
+  selector: random           # random | auction
+
+  # Server-side optimizer hyperparameters. Flat values are fallbacks; per-strategy
+  # overrides in `server_opt` keep the FedAvg/FedOpt/FedAdam comparison fair
+  # (FedAvg is implicitly lr=1; FedAdam's adaptive denominator needs a small lr).
+  server_lr: 0.05            # eta_g (fallback)
+  beta_1: 0.9
+  beta_2: 0.99
+  tau: 1.0e-3                # epsilon for numerical stability (FedAdam)
+  server_opt:
+    fedavg:  {server_lr: 1.0}
+    fedopt:  {server_lr: 1.0, beta_1: 0.9}
+    fedadam: {server_lr: 0.05, beta_1: 0.9, beta_2: 0.99, tau: 1.0e-3}
+
+  # FedPAQ quantization
+  fedpaq:
+    enabled: true
+    levels: 256              # s quantization levels (low-precision); null => no quantization
+
+  # AUCTION client-selection agent
+  auction:
+    budget: 10               # max clients selectable per round (subset size within budget B)
+    warmup_rounds: 5         # rounds of agent pre-training before freezing
+    policy_lr: 1.0e-3
+    cost_weight: 0.1         # reward = d_accuracy - cost_weight * normalized_cost
+
+eval:
+  val_split: 0.2
+  convergence_threshold: 0.80   # accuracy target for "rounds-to-converge" metric
+
+output:
+  dir: experiments
+
+smoke: false   # when true, runner shrinks clients/rounds/data for a fast end-to-end check
