@@ -19,6 +19,20 @@ def save_json(obj, path: str | Path):
     return path
 
 
+def update_latest(domain_dir: str | Path, run_id: str) -> Path:
+    """Point ``<domain_dir>/latest`` at the newest run folder via a relative symlink.
+
+    The target is relative (just ``run_id``) so the link stays valid if ``experiments/``
+    is moved. A stale/broken ``latest`` symlink is replaced; a real directory named
+    ``latest`` is never clobbered (no prior run creates one)."""
+    domain_dir = Path(domain_dir)
+    link = domain_dir / "latest"
+    if link.is_symlink():
+        link.unlink()
+    link.symlink_to(run_id, target_is_directory=True)
+    return link
+
+
 def plot_accuracy_curves(results: list[dict], title: str, out_path: str | Path):
     """One curve per strategy: eval accuracy vs communication round."""
     import matplotlib

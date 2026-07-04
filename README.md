@@ -71,8 +71,11 @@ All commands below assume `.venv/bin/python` (or activate with `source .venv/bin
 .venv/bin/python scripts/run_experiment.py --config healthcare --sweep
 ```
 
-Outputs land under `experiments/<domain>/`: `results_table.{csv,md}`, `curves/*.png`,
-`runs/*.json`, `centralized.json`, `partitions/*.png`.
+Each run is written to a timestamped folder `experiments/<domain>/<YYYYMMDDHHMMSS>/` so
+reruns never overwrite earlier results, and `experiments/<domain>/latest` symlinks to the
+most recent run. Inside a run folder: `results_table.{csv,md}`, `curves/*.png`,
+`runs/*.json`, `centralized.json` (sweep) or `single/*.json` (single cell). Partition
+figures from `make_partition_figures.py` stay at `experiments/<domain>/partitions/*.png`.
 
 ### Datasets
 

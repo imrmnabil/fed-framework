@@ -16,6 +16,7 @@ Examples
 import _bootstrap  # noqa: F401
 
 import argparse
+from datetime import datetime
 from pathlib import Path
 
 from fedcity.config import REPO_ROOT, load_config
@@ -51,24 +52,28 @@ def _base_cfg(args) -> dict:
     return load_config(args.config, overrides or None)
 
 
-def run_single(args):
+def run_single(args, run_id):
     cfg = _base_cfg(args)
     cfg["partition"] = {"kind": args.partition, **({"alpha": args.alpha} if args.partition == "dirichlet" else {})}
     cfg["federated"]["strategy"] = args.strategy
     print(f"== {cfg['domain']} | {args.strategy} | {report.partition_label(cfg['partition'])} ==")
     res = FederatedSimulation(cfg).run(verbose=True)
-    out = REPO_ROOT / cfg["output"]["dir"] / cfg["domain"] / "single"
+    domain_dir = REPO_ROOT / cfg["output"]["dir"] / cfg["domain"]
+    out = domain_dir / run_id / "single"
     report.save_json(res, out / f"{args.strategy}_{args.partition}{args.alpha if args.partition=='dirichlet' else ''}.json")
+    report.update_latest(domain_dir, run_id)
     print(f"\nfinal_acc={res['final_accuracy']:.4f}  best={res['best_accuracy']:.4f}  "
           f"conv@{res['rounds_to_threshold']}  comm={res['comm_total_mb']:.2f}MB")
+    print(f"saved to {out}")
 
 
-def run_sweep(args):
+def run_sweep(args, run_id):
     cfg0 = _base_cfg(args)
     domain = cfg0["domain"]
     bundle = load_dataset(cfg0)          # load once, reuse across all cells
     partitions = DOMAIN_PARTITIONS.get(domain, DOMAIN_PARTITIONS["synthetic"])
-    out_dir = REPO_ROOT / cfg0["output"]["dir"] / domain
+    domain_dir = REPO_ROOT / cfg0["output"]["dir"] / domain
+    out_dir = domain_dir / run_id
 
     all_results = []
     by_partition: dict[str, list[dict]] = {}
@@ -97,6 +102,7 @@ def run_sweep(args):
     report.save_json(cl, out_dir / "centralized.json")
     report.write_table_csv(all_results, out_dir / "results_table.csv")
     md = report.write_table_markdown(all_results, cl, out_dir / "results_table.md")
+    report.update_latest(domain_dir, run_id)
     print("\n" + md)
     print(f"All outputs under {out_dir}")
 
@@ -117,10 +123,11 @@ def main():
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
 
+    run_id = datetime.now().strftime("%Y%m%d%H%M%S")
     if args.sweep:
-        run_sweep(args)
+        run_sweep(args, run_id)
     else:
-        run_single(args)
+        run_single(args, run_id)
 
 
 if __name__ == "__main__":
