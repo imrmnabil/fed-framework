@@ -129,7 +129,7 @@ def load_smartgrid(cfg: dict) -> DatasetBundle:
 # Traffic — GTSRB
 # --------------------------------------------------------------------------- #
 def load_traffic(cfg: dict) -> DatasetBundle:
-    import tensorflow as tf
+    from PIL import Image
 
     ds_cfg = cfg["dataset"]
     seed = cfg["seed"]
@@ -164,10 +164,10 @@ def load_traffic(cfg: dict) -> DatasetBundle:
 
     imgs = np.empty((len(paths), size, size, 3), dtype=np.float32)
     for i, p in enumerate(paths):
-        raw = tf.io.read_file(p)
-        img = tf.io.decode_image(raw, channels=3, expand_animations=False)
-        img = tf.image.resize(img, (size, size))
-        imgs[i] = img.numpy() / 255.0
+        # GTSRB ships as PPM, which tf.io.decode_image cannot read; PIL handles it.
+        with Image.open(p) as im:
+            im = im.convert("RGB").resize((size, size), Image.BILINEAR)
+            imgs[i] = np.asarray(im, dtype=np.float32) / 255.0
     y = np.asarray(labels, dtype=int)
 
     xtr, xval, ytr, yval = _split(imgs, y, cfg["eval"]["val_split"], seed)
